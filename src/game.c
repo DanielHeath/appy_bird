@@ -2,9 +2,6 @@
 #include "game.h"
 #include "score.h"
 
-// Time always in ms
-#define MAX_TIME      5000
-#define TIME_INTERVAL 10
 #define SHIP_MOVE_SPEED 3
 
 static GBitmap *ship;
@@ -12,16 +9,12 @@ static GBitmap *ship;
 static struct GameUi {
   Window *window;
   TextLayer *score_text;
-  TextLayer *time_text;
   BitmapLayer *ship_bmp;
 } ui;
 
 static struct GameState {
   unsigned ship_position;
   unsigned score;
-  unsigned time; // Elapsed time in ms
-  uint16_t prev_ms;
-  AppTimer *timer;
 } state;
 
 static void redraw_ship() {
@@ -60,20 +53,11 @@ static void window_load(Window *window) {
   GRect bounds = layer_get_bounds(window_layer);
 
   ui.score_text = text_layer_create((GRect) {
-        .origin = { 0, 72 },
+        .origin = { 0, 0 },
         .size = { bounds.size.w, 20 }
       });
   text_layer_set_text_alignment(ui.score_text, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(ui.score_text));
-
-  ui.time_text = text_layer_create((GRect) {
-        .origin = { 0, 0 },
-        .size = { bounds.size.w, 64 }
-      });
-  text_layer_set_text_alignment(ui.time_text, GTextAlignmentCenter);
-  text_layer_set_font(ui.time_text,
-                      fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD));
-  layer_add_child(window_layer, text_layer_get_layer(ui.time_text));
 
   ui.ship_bmp = bitmap_layer_create((GRect) {
         .origin = { 2, 80 },
@@ -88,14 +72,11 @@ static void window_load(Window *window) {
 static void window_appear(Window *window) {
   // When the game window appears, reset the game
   state.score = 0;
-  state.time = 0;
-  state.timer = NULL;
   state.ship_position = 80;
   text_layer_set_text(ui.score_text, "Select to Start");
 }
 
 static void window_unload(Window *window) {
-  text_layer_destroy(ui.time_text);
   text_layer_destroy(ui.score_text);
   bitmap_layer_destroy(ui.ship_bmp);
 }
