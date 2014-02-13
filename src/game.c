@@ -3,6 +3,7 @@
 #include "score.h"
 #include "flappy_resource.h"
 #include "flappy.h"
+#include "collisions.h"
 
 #define SHIP_MOVE_SPEED 3
 
@@ -23,22 +24,20 @@ static struct GameUi {
 static struct GameState {
   unsigned ship_position;
   unsigned score;
+  AnimationImplementation collider_implementation;
+  Animation *collider;
 } state;
 
 static void redraw_ship() {
   Layer *internal = bitmap_layer_get_layer(ui.ship_bmp);
-  GRect oldbounds = layer_get_bounds(internal);
+  GRect oldbounds = layer_get_frame(internal);
   oldbounds.origin.y = state.ship_position;
   layer_set_frame(internal, oldbounds);
 }
 
 static GRect ship_rect() {
   Layer *internal = bitmap_layer_get_layer(ui.ship_bmp);
-  return layer_get_bounds(internal);
-}
-
-static GPoint ship_location() {
-  return ship_rect().origin;
+  return layer_get_frame(internal);
 }
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
@@ -65,11 +64,40 @@ static void click_config_provider(void *context) {
   window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 30, down_click_handler);
 }
 
+static void collider_update(struct Animation *animation, const uint32_t time_normalized) {
+  GRect flappy_pos = flappy_bounds(ui.flappy);
+  GRect ship_pos = ship_rect();
+  APP_LOG(APP_LOG_LEVEL_INFO, "Checking outside call flap (y): size %i, %i offset %i, %i", flappy_pos.size.w, flappy_pos.size.h, flappy_pos.origin.x, flappy_pos.origin.y);
+  APP_LOG(APP_LOG_LEVEL_INFO, "Checking outside call ship (y): size %i, %i offset %i, %i", ship_pos.size.w, ship_pos.size.h, ship_pos.origin.x, ship_pos.origin.y);
+  if (collides(flappy_pos, ship_pos)) {
+    text_layer_set_text(ui.score_text, "You have died.");
+  }
+}
+
+static void setup_collision_detection() {
+  state.collider = animation_create();
+  state.collider_implementation = (AnimationImplementation) {
+    .update = collider_update
+  };
+  animation_set_duration(state.collider, ANIMATION_DURATION_INFINITE);
+
+  animation_set_implementation(state.collider, &state.collider_implementation);
+  animation_schedule(state.collider);
+}
+
+static void teardown_collision_detection() {
+  if ((int)state.collider > 0) {
+    animation_destroy(state.collider);
+    state.collider = 0;
+  }
+}
+
 static void reset_game() {
   // When the game window appears, reset the game
   state.score = 0;
   state.ship_position = 80;
   text_layer_set_text(ui.score_text, "Select to Start");
+  teardown_collision_detection();
 }
 
 static void window_load(Window *window) {
@@ -95,6 +123,9 @@ static void window_load(Window *window) {
 
   ui.flappy = malloc(sizeof(Flappy));
   flappy_create(ui.flappy, window_layer, (GPoint) { 120, 80 }, (GPoint) { SHIP_OFFSET_FROM_LEFT, state.ship_position });
+
+  redraw_ship();
+  setup_collision_detection();
 }
 
 static void window_unload(Window *window) {

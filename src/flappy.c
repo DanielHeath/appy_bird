@@ -11,6 +11,11 @@ typedef struct Flappy {
   BitmapLayer *bitmap_layer;
 } Flappy;
 
+GRect flappy_bounds(Flappy* flappy) {
+  Layer *internal = bitmap_layer_get_layer((*flappy).bitmap_layer);
+  return layer_get_frame(internal);
+}
+
 void flappy_create(Flappy* result, Layer *window_layer, GPoint from, GPoint to) {
   BitmapLayer *layer = bitmap_layer_create((GRect) {
     .origin = from,

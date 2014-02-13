@@ -7,6 +7,8 @@ typedef struct Flappy {
   BitmapLayer *bitmap_layer;
 } Flappy;
 
+GRect flappy_bounds(Flappy* flappy);
 
 void flappy_create(Flappy* result, Layer *window_layer, GPoint from, GPoint to);
 void flappy_destroy(Flappy* flappy);
+
