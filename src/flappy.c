@@ -16,6 +16,12 @@ GRect flappy_bounds(Flappy* flappy) {
   return layer_get_frame(internal);
 }
 
+void _stop_flappy_anim(struct Animation *animation, bool finished, void *context){
+  Flappy *result = (Flappy*)context;
+  animation_schedule((Animation *)(*result).property_animation);
+}
+AnimationHandlers flappy_handlers = { NULL, _stop_flappy_anim };
+
 void flappy_create(Flappy* result, Layer *window_layer, GPoint from, GPoint to) {
   BitmapLayer *layer = bitmap_layer_create((GRect) {
     .origin = from,
@@ -33,10 +39,13 @@ void flappy_create(Flappy* result, Layer *window_layer, GPoint from, GPoint to) 
     .size = FLAPPY_SIZE
   };
 
- (*result).property_animation = property_animation_create_layer_frame(bitmap_layer_get_layer((*result).bitmap_layer), NULL, &to_rect);
-  animation_set_duration((Animation*) (*result).property_animation, 2600);
-  animation_set_curve((Animation*) (*result).property_animation, AnimationCurveEaseIn);
-  animation_schedule((Animation*) (*result).property_animation);
+  PropertyAnimation* pa = property_animation_create_layer_frame(bitmap_layer_get_layer((*result).bitmap_layer), NULL, &to_rect);
+  Animation* anim = &(*pa).animation;
+  animation_set_handlers(anim, flappy_handlers, result);
+  animation_set_duration(anim, 2600);
+  animation_set_curve(anim, AnimationCurveEaseIn);
+  animation_schedule(anim);
+  (*result).property_animation = pa;
 }
 
 void flappy_destroy(Flappy* flappy) {

@@ -10,7 +10,8 @@
 #define SHIP_SIZE_H 13
 #define SHIP_SIZE_W 16
 #define SHIP_SIZE { SHIP_SIZE_H, SHIP_SIZE_W }
-#define SHIP_OFFSET_FROM_LEFT 3
+#define SHIP_OFFSET_FROM_LEFT 8
+#define EXIT_STAGE_LEFT -25
 
 static GBitmap *ship;
 
@@ -22,8 +23,8 @@ static struct GameUi {
 } ui;
 
 static struct GameState {
-  unsigned ship_position;
-  unsigned score;
+  unsigned short ship_position;
+  unsigned short score;
   AnimationImplementation collider_implementation;
   Animation *collider;
 } state;
@@ -67,8 +68,6 @@ static void click_config_provider(void *context) {
 static void collider_update(struct Animation *animation, const uint32_t time_normalized) {
   GRect flappy_pos = flappy_bounds(ui.flappy);
   GRect ship_pos = ship_rect();
-  APP_LOG(APP_LOG_LEVEL_INFO, "Checking outside call flap (y): size %i, %i offset %i, %i", flappy_pos.size.w, flappy_pos.size.h, flappy_pos.origin.x, flappy_pos.origin.y);
-  APP_LOG(APP_LOG_LEVEL_INFO, "Checking outside call ship (y): size %i, %i offset %i, %i", ship_pos.size.w, ship_pos.size.h, ship_pos.origin.x, ship_pos.origin.y);
   if (collides(flappy_pos, ship_pos)) {
     text_layer_set_text(ui.score_text, "You have died.");
   }
@@ -122,7 +121,7 @@ static void window_load(Window *window) {
   reset_game();
 
   ui.flappy = malloc(sizeof(Flappy));
-  flappy_create(ui.flappy, window_layer, (GPoint) { 120, 80 }, (GPoint) { SHIP_OFFSET_FROM_LEFT, state.ship_position });
+  flappy_create(ui.flappy, window_layer, (GPoint) { 160, 80 }, (GPoint) { EXIT_STAGE_LEFT, state.ship_position });
 
   redraw_ship();
   setup_collision_detection();
