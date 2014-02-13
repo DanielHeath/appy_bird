@@ -5,6 +5,7 @@
 // Time always in ms
 #define MAX_TIME      5000
 #define TIME_INTERVAL 10
+#define SHIP_MOVE_SPEED 3
 
 static GBitmap *ship;
 
@@ -16,26 +17,42 @@ static struct GameUi {
 } ui;
 
 static struct GameState {
+  unsigned ship_position;
   unsigned score;
   unsigned time; // Elapsed time in ms
   uint16_t prev_ms;
   AppTimer *timer;
 } state;
 
-static void finish(void) {
-  high_score_show();
-  high_score_add_score(state.score);
+static void redraw_ship() {
+  Layer *internal = bitmap_layer_get_layer(ui.ship_bmp);
+  GRect oldbounds = layer_get_bounds(internal);
+  oldbounds.origin.y = state.ship_position;
+  layer_set_frame(internal, oldbounds);
 }
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
   static char buf[32];
+
   ++state.score;
   snprintf(buf, 32, "Score: %u", state.score);
   text_layer_set_text(ui.score_text, buf);
 }
 
+static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
+  state.ship_position = state.ship_position - SHIP_MOVE_SPEED;
+  redraw_ship();
+}
+
+static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
+  state.ship_position = state.ship_position + SHIP_MOVE_SPEED;
+  redraw_ship();
+}
+
 static void click_config_provider(void *context) {
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
+  window_single_repeating_click_subscribe(BUTTON_ID_UP, 30, up_click_handler);
+  window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 30, down_click_handler);
 }
 
 static void window_load(Window *window) {
@@ -59,8 +76,8 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(ui.time_text));
 
   ui.ship_bmp = bitmap_layer_create((GRect) {
-        .origin = { 0, 0 },
-        .size = { 13, bounds.size.h}
+        .origin = { 2, 80 },
+        .size = { 13, 16}
       });
 
   bitmap_layer_set_bitmap(ui.ship_bmp, ship);
@@ -73,8 +90,8 @@ static void window_appear(Window *window) {
   state.score = 0;
   state.time = 0;
   state.timer = NULL;
-
-  text_layer_set_text(ui.score_text, "Press Select to Start");
+  state.ship_position = 80;
+  text_layer_set_text(ui.score_text, "Select to Start");
 }
 
 static void window_unload(Window *window) {
