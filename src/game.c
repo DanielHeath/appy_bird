@@ -6,10 +6,13 @@
 #define MAX_TIME      5000
 #define TIME_INTERVAL 10
 
+static GBitmap *ship;
+
 static struct GameUi {
   Window *window;
   TextLayer *score_text;
   TextLayer *time_text;
+  BitmapLayer *ship_bmp;
 } ui;
 
 static struct GameState {
@@ -24,39 +27,7 @@ static void finish(void) {
   high_score_add_score(state.score);
 }
 
-static void update_time_text(unsigned seconds, unsigned fraction) {
-  static char buf[16];
-  snprintf(buf, 16, "%u.%02u", seconds, fraction);
-  text_layer_set_text(ui.time_text, buf);
-}
-
-static void timer_callback(void *data) {
-  uint16_t c_ms = time_ms(NULL, NULL);
-  uint16_t elapsed;
-  if (c_ms < state.prev_ms)
-    elapsed = (c_ms+1000) - state.prev_ms;
-  else
-    elapsed = c_ms - state.prev_ms;
-  state.prev_ms = c_ms;
-
-  state.time += elapsed;
-  unsigned seconds_remaining = (MAX_TIME - state.time) / 1000;
-  unsigned fraction_remaining = ((MAX_TIME - state.time) % 1000) / 10;
-
-  update_time_text(seconds_remaining, fraction_remaining);
-  if (state.time < MAX_TIME)
-    state.timer = app_timer_register(TIME_INTERVAL - (elapsed % TIME_INTERVAL),
-                                     timer_callback, NULL);
-  else
-    finish();
-}
-
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
-  if (!state.timer) {
-    state.prev_ms = time_ms(NULL, NULL);
-    state.timer = app_timer_register(TIME_INTERVAL, timer_callback, NULL);
-  }
-
   static char buf[32];
   ++state.score;
   snprintf(buf, 32, "Score: %u", state.score);
@@ -86,6 +57,15 @@ static void window_load(Window *window) {
   text_layer_set_font(ui.time_text,
                       fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD));
   layer_add_child(window_layer, text_layer_get_layer(ui.time_text));
+
+  ui.ship_bmp = bitmap_layer_create((GRect) {
+        .origin = { 0, 0 },
+        .size = { 13, bounds.size.h}
+      });
+
+  bitmap_layer_set_bitmap(ui.ship_bmp, ship);
+  bitmap_layer_set_compositing_mode(ui.ship_bmp, GCompOpClear);
+  layer_add_child(window_layer, bitmap_layer_get_layer(ui.ship_bmp));
 }
 
 static void window_appear(Window *window) {
@@ -94,16 +74,18 @@ static void window_appear(Window *window) {
   state.time = 0;
   state.timer = NULL;
 
-  update_time_text(MAX_TIME/1000, (MAX_TIME % 1000) / 10);
   text_layer_set_text(ui.score_text, "Press Select to Start");
 }
 
 static void window_unload(Window *window) {
   text_layer_destroy(ui.time_text);
   text_layer_destroy(ui.score_text);
+  bitmap_layer_destroy(ui.ship_bmp);
 }
 
 void game_init(void) {
+  ship = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SHIP_BLACK);
+
   ui.window = window_create();
 
   window_set_click_config_provider(ui.window, click_config_provider);
@@ -117,5 +99,6 @@ void game_init(void) {
 }
 
 void game_deinit(void) {
+  gbitmap_destroy(ship);
   window_destroy(ui.window);
 }
