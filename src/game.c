@@ -1,25 +1,23 @@
 #include <pebble.h>
 #include "game.h"
 #include "score.h"
+#include "flappy_resource.h"
+#include "flappy.h"
 
 #define SHIP_MOVE_SPEED 3
-
-#define FLAPPY_SIZE_H 16
-#define FLAPPY_SIZE_W 10
-#define FLAPPY_SIZE { FLAPPY_SIZE_H, FLAPPY_SIZE_W }
 
 #define SHIP_SIZE_H 13
 #define SHIP_SIZE_W 16
 #define SHIP_SIZE { SHIP_SIZE_H, SHIP_SIZE_W }
+#define SHIP_OFFSET_FROM_LEFT 3
 
 static GBitmap *ship;
-static GBitmap *bird_left;
 
 static struct GameUi {
   Window *window;
   TextLayer *score_text;
   BitmapLayer *ship_bmp;
-  BitmapLayer *flappy_left_bmp;
+  Flappy *flappy;
 } ui;
 
 static struct GameState {
@@ -37,6 +35,10 @@ static void redraw_ship() {
 static GRect ship_rect() {
   Layer *internal = bitmap_layer_get_layer(ui.ship_bmp);
   return layer_get_bounds(internal);
+}
+
+static GPoint ship_location() {
+  return ship_rect().origin;
 }
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
@@ -63,8 +65,12 @@ static void click_config_provider(void *context) {
   window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 30, down_click_handler);
 }
 
-struct PropertyAnimation * flappy_animator;
-GRect to_rect;
+static void reset_game() {
+  // When the game window appears, reset the game
+  state.score = 0;
+  state.ship_position = 80;
+  text_layer_set_text(ui.score_text, "Select to Start");
+}
 
 static void window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(ui.window);
@@ -78,45 +84,28 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(ui.score_text));
 
   ui.ship_bmp = bitmap_layer_create((GRect) {
-        .origin = { 2, 80 },
+        .origin = { SHIP_OFFSET_FROM_LEFT, 80 },
         .size = SHIP_SIZE
       });
   bitmap_layer_set_bitmap(ui.ship_bmp, ship);
   bitmap_layer_set_compositing_mode(ui.ship_bmp, GCompOpClear);
   layer_add_child(window_layer, bitmap_layer_get_layer(ui.ship_bmp));
 
-  ui.flappy_left_bmp = bitmap_layer_create((GRect) {
-        .origin = { 120, 80 },
-        .size = FLAPPY_SIZE
-      });
-  bitmap_layer_set_bitmap(ui.flappy_left_bmp, bird_left);
-  bitmap_layer_set_compositing_mode(ui.flappy_left_bmp, GCompOpClear);
-  layer_add_child(window_layer, bitmap_layer_get_layer(ui.flappy_left_bmp));
+  reset_game();
 
-  to_rect = ship_rect();
-  to_rect.size.h = FLAPPY_SIZE_H ;
-  to_rect.size.w = FLAPPY_SIZE_W ;
-  flappy_animator = property_animation_create_layer_frame(bitmap_layer_get_layer(ui.flappy_left_bmp), NULL, &to_rect);
-  animation_set_duration((Animation*) flappy_animator, 3000);
-  animation_schedule((Animation*) flappy_animator);
-}
-
-static void window_appear(Window *window) {
-  // When the game window appears, reset the game
-  state.score = 0;
-  state.ship_position = 80;
-  text_layer_set_text(ui.score_text, "Select to Start");
+  ui.flappy = malloc(sizeof(Flappy));
+  flappy_create(ui.flappy, window_layer, (GPoint) { 120, 80 }, (GPoint) { SHIP_OFFSET_FROM_LEFT, state.ship_position });
 }
 
 static void window_unload(Window *window) {
   text_layer_destroy(ui.score_text);
   bitmap_layer_destroy(ui.ship_bmp);
-  bitmap_layer_destroy(ui.flappy_left_bmp);
+  flappy_destroy(ui.flappy);
 }
 
 void game_init(void) {
   ship = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SHIP_BLACK);
-  bird_left = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_FLAPPY_LEFT_BLACK);
+  flappy_module_init();
 
   ui.window = window_create();
 
@@ -124,7 +113,6 @@ void game_init(void) {
   window_set_window_handlers(ui.window, (WindowHandlers) {
     .load = window_load,
     .unload = window_unload,
-    .appear = window_appear
   });
   const bool animated = true;
   window_stack_push(ui.window, animated);
@@ -132,6 +120,6 @@ void game_init(void) {
 
 void game_deinit(void) {
   gbitmap_destroy(ship);
-  gbitmap_destroy(bird_left);
+  flappy_module_deinit();
   window_destroy(ui.window);
 }
