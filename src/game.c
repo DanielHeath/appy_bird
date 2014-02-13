@@ -4,12 +4,22 @@
 
 #define SHIP_MOVE_SPEED 3
 
+#define FLAPPY_SIZE_H 16
+#define FLAPPY_SIZE_W 10
+#define FLAPPY_SIZE { FLAPPY_SIZE_H, FLAPPY_SIZE_W }
+
+#define SHIP_SIZE_H 13
+#define SHIP_SIZE_W 16
+#define SHIP_SIZE { SHIP_SIZE_H, SHIP_SIZE_W }
+
 static GBitmap *ship;
+static GBitmap *bird_left;
 
 static struct GameUi {
   Window *window;
   TextLayer *score_text;
   BitmapLayer *ship_bmp;
+  BitmapLayer *flappy_left_bmp;
 } ui;
 
 static struct GameState {
@@ -22,6 +32,11 @@ static void redraw_ship() {
   GRect oldbounds = layer_get_bounds(internal);
   oldbounds.origin.y = state.ship_position;
   layer_set_frame(internal, oldbounds);
+}
+
+static GRect ship_rect() {
+  Layer *internal = bitmap_layer_get_layer(ui.ship_bmp);
+  return layer_get_bounds(internal);
 }
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
@@ -48,6 +63,9 @@ static void click_config_provider(void *context) {
   window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 30, down_click_handler);
 }
 
+struct PropertyAnimation * flappy_animator;
+GRect to_rect;
+
 static void window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(ui.window);
   GRect bounds = layer_get_bounds(window_layer);
@@ -61,12 +79,26 @@ static void window_load(Window *window) {
 
   ui.ship_bmp = bitmap_layer_create((GRect) {
         .origin = { 2, 80 },
-        .size = { 13, 16}
+        .size = SHIP_SIZE
       });
-
   bitmap_layer_set_bitmap(ui.ship_bmp, ship);
   bitmap_layer_set_compositing_mode(ui.ship_bmp, GCompOpClear);
   layer_add_child(window_layer, bitmap_layer_get_layer(ui.ship_bmp));
+
+  ui.flappy_left_bmp = bitmap_layer_create((GRect) {
+        .origin = { 120, 80 },
+        .size = FLAPPY_SIZE
+      });
+  bitmap_layer_set_bitmap(ui.flappy_left_bmp, bird_left);
+  bitmap_layer_set_compositing_mode(ui.flappy_left_bmp, GCompOpClear);
+  layer_add_child(window_layer, bitmap_layer_get_layer(ui.flappy_left_bmp));
+
+  to_rect = ship_rect();
+  to_rect.size.h = FLAPPY_SIZE_H ;
+  to_rect.size.w = FLAPPY_SIZE_W ;
+  flappy_animator = property_animation_create_layer_frame(bitmap_layer_get_layer(ui.flappy_left_bmp), NULL, &to_rect);
+  animation_set_duration((Animation*) flappy_animator, 3000);
+  animation_schedule((Animation*) flappy_animator);
 }
 
 static void window_appear(Window *window) {
@@ -79,10 +111,12 @@ static void window_appear(Window *window) {
 static void window_unload(Window *window) {
   text_layer_destroy(ui.score_text);
   bitmap_layer_destroy(ui.ship_bmp);
+  bitmap_layer_destroy(ui.flappy_left_bmp);
 }
 
 void game_init(void) {
   ship = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SHIP_BLACK);
+  bird_left = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_FLAPPY_LEFT_BLACK);
 
   ui.window = window_create();
 
@@ -98,5 +132,6 @@ void game_init(void) {
 
 void game_deinit(void) {
   gbitmap_destroy(ship);
+  gbitmap_destroy(bird_left);
   window_destroy(ui.window);
 }
