@@ -21,6 +21,10 @@ static GBitmap *ship_splode_3;
 static GBitmap *ship_splode_4;
 static GBitmap *ship_splode_5;
 
+// / todo clamp up/down value
+// / todo vibrate on death
+// / todo flash screen on death
+
 static struct GameUi {
   Window *window;
   TextLayer *score_text;
@@ -69,12 +73,18 @@ static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
   if (state.player_dead || state.game_paused) {
     return;
   }
+  if (state.ship_position < 20) {
+    return;
+  }
   state.ship_position = state.ship_position - SHIP_MOVE_SPEED;
   engine.redraw_ship();
 }
 
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
   if (state.player_dead || state.game_paused) {
+    return;
+  }
+  if (state.ship_position > 130) {
     return;
   }
   state.ship_position = state.ship_position + SHIP_MOVE_SPEED;
@@ -88,6 +98,7 @@ static void click_config_provider(void *context) {
 }
 
 static void death_animation_frame(GBitmap *anim_frame) {
+  vibes_short_pulse();
   bitmap_layer_set_bitmap(ui.ship_bmp, anim_frame);
 }
 
