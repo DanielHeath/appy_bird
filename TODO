@@ -1,9 +1,11 @@
 [X] Add PropertyAnimation to move the default flappy instance towards the player
-[ ] Detect player-flappy collisions on animation events
-[ ] Detect flappy-wall collisions on animation events (via custom animation impl?)
-[ ] Detect flappy reaching the back of the world (and wrap around?)
-[ ] Intermittently spawn new flappy instance
+[X] Detect player-flappy collisions on animation events
+[X] Detect flappy reaching the back of the world (and wrap around?)
+[X] Intermittently spawn new flappy instance
+[X] Flappy death sequence
 [ ] Intermittently increase flappy velocity?
+[ ] Flappy wave movement?
+[ ] Flappy vector movement?
 
 [ ] Player can create projectiles
 [ ] Projectiles can collide with flappy
