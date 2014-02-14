@@ -35,12 +35,23 @@ static struct GameState {
   Animation *collider;
 } state;
 
-static void redraw_ship() {
-  Layer *internal = bitmap_layer_get_layer(ui.ship_bmp);
-  GRect oldbounds = layer_get_frame(internal);
-  oldbounds.origin.y = state.ship_position;
-  layer_set_frame(internal, oldbounds);
-}
+typedef void (*GameEngineImpl)(void);
+static struct GameEngine {
+  GameEngineImpl redraw_ship;
+  GameEngineImpl kill_player;
+  GameEngineImpl reset_game;
+  GameEngineImpl setup_collision_detection;
+  GameEngineImpl cleanup_flappy;
+} engine;
+
+
+
+
+
+
+
+
+
 
 static GRect ship_rect() {
   Layer *internal = bitmap_layer_get_layer(ui.ship_bmp);
@@ -63,7 +74,7 @@ static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
     return;
   }
   state.ship_position = state.ship_position - SHIP_MOVE_SPEED;
-  redraw_ship();
+  engine.redraw_ship();
 }
 
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
@@ -71,13 +82,70 @@ static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
     return;
   }
   state.ship_position = state.ship_position + SHIP_MOVE_SPEED;
-  redraw_ship();
+  engine.redraw_ship();
 }
 
 static void click_config_provider(void *context) {
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
   window_single_repeating_click_subscribe(BUTTON_ID_UP, 30, up_click_handler);
   window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 30, down_click_handler);
+}
+
+static void death_animation_frame(GBitmap *anim_frame) {
+  bitmap_layer_set_bitmap(ui.ship_bmp, anim_frame);
+}
+
+static void end_death_animation(void *nulldata) {
+  death_animation_frame(ship);
+  engine.reset_game();
+}
+
+static void collider_update(struct Animation *animation, const uint32_t time_normalized) {
+  if (state.player_dead) {
+    return;
+  }
+  GRect flappy_pos = flappy_bounds(ui.flappy);
+  GRect ship_pos = ship_rect();
+  if (collides(flappy_pos, ship_pos)) {
+    engine.kill_player();
+  }
+}
+
+static void window_load(Window *window) {
+  Layer *window_layer = window_get_root_layer(ui.window);
+  GRect bounds = layer_get_bounds(window_layer);
+
+  ui.score_text = text_layer_create((GRect) {
+        .origin = { 0, 0 },
+        .size = { bounds.size.w, 20 }
+      });
+  text_layer_set_text_alignment(ui.score_text, GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(ui.score_text));
+
+  ui.ship_bmp = bitmap_layer_create((GRect) {
+        .origin = { SHIP_OFFSET_FROM_LEFT, 80 },
+        .size = SHIP_SIZE
+      });
+  bitmap_layer_set_bitmap(ui.ship_bmp, ship);
+  bitmap_layer_set_compositing_mode(ui.ship_bmp, GCompOpClear);
+  layer_add_child(window_layer, bitmap_layer_get_layer(ui.ship_bmp));
+
+  engine.reset_game();
+  engine.redraw_ship();
+  engine.setup_collision_detection();
+}
+
+static void window_unload(Window *window) {
+  text_layer_destroy(ui.score_text);
+  bitmap_layer_destroy(ui.ship_bmp);
+  engine.cleanup_flappy();
+}
+
+static void redraw_ship() {
+  Layer *internal = bitmap_layer_get_layer(ui.ship_bmp);
+  GRect oldbounds = layer_get_frame(internal);
+  oldbounds.origin.y = state.ship_position;
+  layer_set_frame(internal, oldbounds);
 }
 
 static void cleanup_flappy() {
@@ -88,22 +156,13 @@ static void cleanup_flappy() {
 }
 
 static void recreate_flappy() {
-  cleanup_flappy();
+  engine.cleanup_flappy();
   Layer *window_layer = window_get_root_layer(ui.window);
   ui.flappy = malloc(sizeof(Flappy));
   flappy_create(ui.flappy, window_layer, (GPoint) { 160, 80 }, (GPoint) { EXIT_STAGE_LEFT, state.ship_position });
 }
 
-// static void end_death_animation(void *nulldata) {
-//   reset_game()
-// }
-
-static void death_animation_frame(GBitmap *anim_frame) {
-  bitmap_layer_set_bitmap(ui.ship_bmp, anim_frame);
-}
-
 #define DEATH_SPEED 300
-
 static void run_death_animation() {
   unsigned frametime = 0;
   app_timer_register(frametime++ * DEATH_SPEED, (AppTimerCallback)death_animation_frame, ship_splode_1);
@@ -111,27 +170,16 @@ static void run_death_animation() {
   app_timer_register(frametime++ * DEATH_SPEED, (AppTimerCallback)death_animation_frame, ship_splode_3);
   app_timer_register(frametime++ * DEATH_SPEED, (AppTimerCallback)death_animation_frame, ship_splode_4);
   app_timer_register(frametime++ * DEATH_SPEED, (AppTimerCallback)death_animation_frame, ship_splode_5);
-  // app_timer_register(frametime++ * DEATH_SPEED, (AppTimerCallback)end_death_animation, NULL);
+  app_timer_register(frametime++ * DEATH_SPEED, (AppTimerCallback)end_death_animation, NULL);
 }
 
 static void kill_player() {
   state.player_dead = true;
 
-  cleanup_flappy();
+  engine.cleanup_flappy();
 
   text_layer_set_text(ui.score_text, "You have died.");
   run_death_animation();
-}
-
-static void collider_update(struct Animation *animation, const uint32_t time_normalized) {
-  if (state.player_dead) {
-    return;
-  }
-  GRect flappy_pos = flappy_bounds(ui.flappy);
-  GRect ship_pos = ship_rect();
-  if (collides(flappy_pos, ship_pos)) {
-    kill_player();
-  }
 }
 
 static void setup_collision_detection() {
@@ -162,37 +210,13 @@ static void reset_game() {
   recreate_flappy();
 }
 
-static void window_load(Window *window) {
-  Layer *window_layer = window_get_root_layer(ui.window);
-  GRect bounds = layer_get_bounds(window_layer);
-
-  ui.score_text = text_layer_create((GRect) {
-        .origin = { 0, 0 },
-        .size = { bounds.size.w, 20 }
-      });
-  text_layer_set_text_alignment(ui.score_text, GTextAlignmentCenter);
-  layer_add_child(window_layer, text_layer_get_layer(ui.score_text));
-
-  ui.ship_bmp = bitmap_layer_create((GRect) {
-        .origin = { SHIP_OFFSET_FROM_LEFT, 80 },
-        .size = SHIP_SIZE
-      });
-  bitmap_layer_set_bitmap(ui.ship_bmp, ship);
-  bitmap_layer_set_compositing_mode(ui.ship_bmp, GCompOpClear);
-  layer_add_child(window_layer, bitmap_layer_get_layer(ui.ship_bmp));
-
-  reset_game();
-  redraw_ship();
-  setup_collision_detection();
-}
-
-static void window_unload(Window *window) {
-  text_layer_destroy(ui.score_text);
-  bitmap_layer_destroy(ui.ship_bmp);
-  cleanup_flappy();
-}
-
 void game_init(void) {
+  engine.redraw_ship               = redraw_ship;
+  engine.kill_player               = kill_player;
+  engine.reset_game                = reset_game;
+  engine.setup_collision_detection = setup_collision_detection;
+  engine.cleanup_flappy            = cleanup_flappy;
+
   ship = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SHIP_BLACK);
   ship_splode_1 = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SHIP_SPLODE_1_BLACK);
   ship_splode_2 = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SHIP_SPLODE_2_BLACK);
@@ -211,6 +235,7 @@ void game_init(void) {
   });
   const bool animated = true;
   window_stack_push(ui.window, animated);
+
 }
 
 void game_deinit(void) {
