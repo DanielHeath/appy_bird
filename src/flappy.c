@@ -18,7 +18,7 @@ GRect flappy_bounds(Flappy* flappy) {
 
 #define SHOW_FLAPPY false
 #define HIDE_FLAPPY true
-#define POINT_ACCUMULATION 150
+#define POINT_ACCUMULATION 60
 void _set_flappy_hidden(Flappy *flappy, bool hidden) {
 //  APP_LOG(APP_LOG_LEVEL_INFO, "set hidden from %i to %i", (int)layer_get_hidden(bitmap_layer_get_layer((*flappy).bitmap_layer)), (int)hidden);
   layer_set_hidden(bitmap_layer_get_layer((*flappy).bitmap_layer), hidden);
@@ -28,6 +28,7 @@ unsigned game_progression;
 void _flappy_pick_new_angle(Flappy* flappy) {
   game_progression = game_progression + POINT_ACCUMULATION;
   PropertyAnimation* anim = (*flappy).property_animation;
+  animation_set_duration((Animation*)anim, 3000 - game_progression);
   (*anim).values.from.grect.origin.y = (rand() % 124) + 20;
   (*anim).values.to.grect.origin.y = (rand() % 124) + 20;
 }
@@ -95,6 +96,7 @@ void flappy_suspend(Flappy* flappy) {
 
 void flappy_reanimate(Flappy* flappy) {
   _flappy_pick_new_angle(flappy);
+  game_progression = 0;
   _set_flappy_hidden(flappy, SHOW_FLAPPY);
   animation_schedule((Animation*)(*flappy).property_animation);
 }
