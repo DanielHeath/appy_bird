@@ -22,6 +22,31 @@
         "type": "png-trans",
         "name": "IMAGE_FLAPPY_LEFT",
         "file": "images/Flappy_Bird_BW_left.png"
+      },
+      {
+        "type": "png-trans",
+        "name": "IMAGE_SHIP_SPLODE_1",
+        "file": "images/ship_explode_1.png"
+      },
+      {
+        "type": "png-trans",
+        "name": "IMAGE_SHIP_SPLODE_2",
+        "file": "images/ship_explode_2.png"
+      },
+      {
+        "type": "png-trans",
+        "name": "IMAGE_SHIP_SPLODE_3",
+        "file": "images/ship_explode_3.png"
+      },
+      {
+        "type": "png-trans",
+        "name": "IMAGE_SHIP_SPLODE_4",
+        "file": "images/ship_explode_4.png"
+      },
+      {
+        "type": "png-trans",
+        "name": "IMAGE_SHIP_SPLODE_5",
+        "file": "images/ship_explode_5.png"
       }
     ]
   }

@@ -14,6 +14,11 @@
 #define EXIT_STAGE_LEFT -25
 
 static GBitmap *ship;
+static GBitmap *ship_splode_1;
+static GBitmap *ship_splode_2;
+static GBitmap *ship_splode_3;
+static GBitmap *ship_splode_4;
+static GBitmap *ship_splode_5;
 
 static struct GameUi {
   Window *window;
@@ -81,11 +86,32 @@ static void cleanup_flappy() {
     ui.flappy = 0;
   }
 }
+
 static void recreate_flappy() {
   cleanup_flappy();
   Layer *window_layer = window_get_root_layer(ui.window);
   ui.flappy = malloc(sizeof(Flappy));
   flappy_create(ui.flappy, window_layer, (GPoint) { 160, 80 }, (GPoint) { EXIT_STAGE_LEFT, state.ship_position });
+}
+
+// static void end_death_animation(void *nulldata) {
+//   reset_game()
+// }
+
+static void death_animation_frame(GBitmap *anim_frame) {
+  bitmap_layer_set_bitmap(ui.ship_bmp, anim_frame);
+}
+
+#define DEATH_SPEED 300
+
+static void run_death_animation() {
+  unsigned frametime = 0;
+  app_timer_register(frametime++ * DEATH_SPEED, (AppTimerCallback)death_animation_frame, ship_splode_1);
+  app_timer_register(frametime++ * DEATH_SPEED, (AppTimerCallback)death_animation_frame, ship_splode_2);
+  app_timer_register(frametime++ * DEATH_SPEED, (AppTimerCallback)death_animation_frame, ship_splode_3);
+  app_timer_register(frametime++ * DEATH_SPEED, (AppTimerCallback)death_animation_frame, ship_splode_4);
+  app_timer_register(frametime++ * DEATH_SPEED, (AppTimerCallback)death_animation_frame, ship_splode_5);
+  // app_timer_register(frametime++ * DEATH_SPEED, (AppTimerCallback)end_death_animation, NULL);
 }
 
 static void kill_player() {
@@ -94,6 +120,7 @@ static void kill_player() {
   cleanup_flappy();
 
   text_layer_set_text(ui.score_text, "You have died.");
+  run_death_animation();
 }
 
 static void collider_update(struct Animation *animation, const uint32_t time_normalized) {
@@ -167,6 +194,12 @@ static void window_unload(Window *window) {
 
 void game_init(void) {
   ship = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SHIP_BLACK);
+  ship_splode_1 = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SHIP_SPLODE_1_BLACK);
+  ship_splode_2 = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SHIP_SPLODE_2_BLACK);
+  ship_splode_3 = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SHIP_SPLODE_3_BLACK);
+  ship_splode_4 = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SHIP_SPLODE_4_BLACK);
+  ship_splode_5 = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SHIP_SPLODE_5_BLACK);
+
   flappy_module_init();
 
   ui.window = window_create();
