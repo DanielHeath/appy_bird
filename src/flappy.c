@@ -18,7 +18,11 @@ GRect flappy_bounds(Flappy* flappy) {
 
 void _stop_flappy_anim(struct Animation *animation, bool finished, void *context){
   Flappy *result = (Flappy*)context;
-  animation_schedule((Animation *)(*result).property_animation);
+  if (finished) {
+    animation_schedule((Animation *)(*result).property_animation);
+  } else {
+    bitmap_layer_set_bitmap((*result).bitmap_layer, INVALID_RESOURCE);
+  }
 }
 AnimationHandlers flappy_handlers = { NULL, _stop_flappy_anim };
 

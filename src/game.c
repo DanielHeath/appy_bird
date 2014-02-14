@@ -23,6 +23,7 @@ static struct GameUi {
 } ui;
 
 static struct GameState {
+  bool player_dead;
   unsigned short ship_position;
   unsigned short score;
   AnimationImplementation collider_implementation;
@@ -42,6 +43,9 @@ static GRect ship_rect() {
 }
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
+  if (state.player_dead) {
+    return;
+  }
   static char buf[32];
 
   ++state.score;
@@ -50,11 +54,17 @@ static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
+  if (state.player_dead) {
+    return;
+  }
   state.ship_position = state.ship_position - SHIP_MOVE_SPEED;
   redraw_ship();
 }
 
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
+  if (state.player_dead) {
+    return;
+  }
   state.ship_position = state.ship_position + SHIP_MOVE_SPEED;
   redraw_ship();
 }
@@ -65,11 +75,35 @@ static void click_config_provider(void *context) {
   window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 30, down_click_handler);
 }
 
+static void cleanup_flappy() {
+  if ((int)ui.flappy > 0) {
+    flappy_destroy(ui.flappy);
+    ui.flappy = 0;
+  }
+}
+static void recreate_flappy() {
+  cleanup_flappy();
+  Layer *window_layer = window_get_root_layer(ui.window);
+  ui.flappy = malloc(sizeof(Flappy));
+  flappy_create(ui.flappy, window_layer, (GPoint) { 160, 80 }, (GPoint) { EXIT_STAGE_LEFT, state.ship_position });
+}
+
+static void kill_player() {
+  state.player_dead = true;
+
+  cleanup_flappy();
+
+  text_layer_set_text(ui.score_text, "You have died.");
+}
+
 static void collider_update(struct Animation *animation, const uint32_t time_normalized) {
+  if (state.player_dead) {
+    return;
+  }
   GRect flappy_pos = flappy_bounds(ui.flappy);
   GRect ship_pos = ship_rect();
   if (collides(flappy_pos, ship_pos)) {
-    text_layer_set_text(ui.score_text, "You have died.");
+    kill_player();
   }
 }
 
@@ -94,9 +128,11 @@ static void teardown_collision_detection() {
 static void reset_game() {
   // When the game window appears, reset the game
   state.score = 0;
+  state.player_dead = false;
   state.ship_position = 80;
   text_layer_set_text(ui.score_text, "Select to Start");
   teardown_collision_detection();
+  recreate_flappy();
 }
 
 static void window_load(Window *window) {
@@ -119,10 +155,6 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, bitmap_layer_get_layer(ui.ship_bmp));
 
   reset_game();
-
-  ui.flappy = malloc(sizeof(Flappy));
-  flappy_create(ui.flappy, window_layer, (GPoint) { 160, 80 }, (GPoint) { EXIT_STAGE_LEFT, state.ship_position });
-
   redraw_ship();
   setup_collision_detection();
 }
@@ -130,7 +162,7 @@ static void window_load(Window *window) {
 static void window_unload(Window *window) {
   text_layer_destroy(ui.score_text);
   bitmap_layer_destroy(ui.ship_bmp);
-  flappy_destroy(ui.flappy);
+  cleanup_flappy();
 }
 
 void game_init(void) {
