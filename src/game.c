@@ -6,6 +6,7 @@
 #include "collisions.h"
 
 #define SHIP_MOVE_SPEED 3
+#define BIRDY_SPAWN_TIME 400
 
 #define SHIP_SIZE_H 13
 #define SHIP_SIZE_W 16
@@ -25,6 +26,8 @@ static struct GameUi {
   TextLayer *score_text;
   BitmapLayer *ship_bmp;
   Flappy *flappy;
+  Flappy *birdy;
+  AppTimer *flappy_spawn_timer;
 } ui;
 
 static struct GameState {
@@ -88,8 +91,6 @@ static void death_animation_frame(GBitmap *anim_frame) {
   bitmap_layer_set_bitmap(ui.ship_bmp, anim_frame);
 }
 
-// APP_LOG(APP_LOG_LEVEL_INFO, "HERE?");
-
 static void end_death_animation(void *nulldata) {
   death_animation_frame(ship_bmp);
   engine.reset_game();
@@ -104,6 +105,14 @@ static void collider_update(struct Animation *animation, const uint32_t time_nor
   }
   GRect flappy_pos = flappy_bounds(ui.flappy);
   GRect ship_pos = ship_rect();
+  if (collides(flappy_pos, ship_pos)) {
+    engine.kill_player();
+  }
+
+  if ((int)ui.birdy == 0) {
+    return;
+  }
+  flappy_pos = flappy_bounds(ui.birdy);
   if (collides(flappy_pos, ship_pos)) {
     engine.kill_player();
   }
@@ -153,6 +162,10 @@ static void cleanup_flappy() {
     flappy_destroy(ui.flappy);
     ui.flappy = 0;
   }
+  if ((int)ui.birdy > 0) {
+    flappy_destroy(ui.birdy);
+    ui.birdy = 0;
+  }
 }
 
 #define DEATH_SPEED 300
@@ -171,6 +184,7 @@ static void kill_player() {
   state.game_paused = true;
 
   flappy_suspend(ui.flappy);
+  flappy_suspend(ui.birdy);
 
   text_layer_set_text(ui.score_text, "You have died.");
   run_death_animation();
@@ -203,17 +217,33 @@ static void reset_game() {
   text_layer_set_text(ui.score_text, "Select to Start");
 }
 
+static void birdy_spawn(void* data) {
+  Layer *window_layer = window_get_root_layer(ui.window);
+  ui.birdy = malloc(sizeof(Flappy));
+  flappy_create(ui.birdy, window_layer, (GPoint) { 160, 80 }, (GPoint) { EXIT_STAGE_LEFT, state.ship_position }, false);
+}
+
+static void birdy_reanim(void* data) {
+  flappy_reanimate(ui.birdy);
+}
+
 static void unpause() {
   if (state.game_paused) {
     state.game_paused = false;
     text_layer_set_text(ui.score_text, "Game on!");
 
+// TODO birdy
+
     if ((int)ui.flappy == 0) {
       ui.flappy = malloc(sizeof(Flappy));
       Layer *window_layer = window_get_root_layer(ui.window);
-      flappy_create(ui.flappy, window_layer, (GPoint) { 160, 80 }, (GPoint) { EXIT_STAGE_LEFT, state.ship_position });
+      flappy_create(ui.flappy, window_layer, (GPoint) { 160, 80 }, (GPoint) { EXIT_STAGE_LEFT, state.ship_position }, true);
+
+      ui.flappy_spawn_timer = app_timer_register(BIRDY_SPAWN_TIME, birdy_spawn, NULL);
+      // app_timer_cancel
     } else {
       flappy_reanimate(ui.flappy);
+      ui.flappy_spawn_timer = app_timer_register(BIRDY_SPAWN_TIME, birdy_reanim, NULL);
     }
 
   }

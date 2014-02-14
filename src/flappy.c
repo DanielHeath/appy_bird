@@ -24,25 +24,37 @@ void _set_flappy_hidden(Flappy *flappy, bool hidden) {
   layer_set_hidden(bitmap_layer_get_layer((*flappy).bitmap_layer), hidden);
 }
 
+void _flappy_pick_new_angle(Flappy* flappy) {
+  PropertyAnimation* anim = (*flappy).property_animation;
+  (*anim).values.from.grect.origin.y = (rand() % 124) + 20;
+  (*anim).values.to.grect.origin.y = (rand() % 124) + 20;
+}
+
 void _stop_flappy_anim(struct Animation *animation, bool finished, void *context){
-  Flappy *result = (Flappy*)context;
+  Flappy *flappy = (Flappy*)context;
   if (finished) {
-    animation_schedule((Animation *)(*result).property_animation);
+    _flappy_pick_new_angle(flappy);
+    animation_schedule((Animation *)(*flappy).property_animation);
   } else {
-    Flappy *result = (Flappy*)context;
-    _set_flappy_hidden(result, HIDE_FLAPPY);
+    _set_flappy_hidden(flappy, HIDE_FLAPPY);
   }
 }
 AnimationHandlers flappy_handlers = { NULL, _stop_flappy_anim };
 
-void flappy_create(Flappy* result, Layer *window_layer, GPoint from, GPoint to) {
+void flappy_create(Flappy* result, Layer *window_layer, GPoint from, GPoint to, bool first) {
   BitmapLayer *layer = bitmap_layer_create((GRect) {
     .origin = from,
     .size = FLAPPY_SIZE
   });
 
   bitmap_layer_set_compositing_mode(layer, GCompOpClear);
-  bitmap_layer_set_bitmap(layer, bird_left());
+
+  if (first) {
+    bitmap_layer_set_bitmap(layer, bird_left());
+  } else {
+    bitmap_layer_set_bitmap(layer, duck_hunt());
+  }
+
   layer_add_child(window_layer, bitmap_layer_get_layer(layer));
 
   (*result).bitmap_layer = layer;
@@ -55,7 +67,12 @@ void flappy_create(Flappy* result, Layer *window_layer, GPoint from, GPoint to) 
   PropertyAnimation* pa = property_animation_create_layer_frame(bitmap_layer_get_layer((*result).bitmap_layer), NULL, &to_rect);
   Animation* anim = &(*pa).animation;
   animation_set_handlers(anim, flappy_handlers, result);
-  animation_set_duration(anim, 2600);
+
+  if (first) {
+    animation_set_duration(anim, 2600);
+  } else {
+    animation_set_duration(anim, 3000);
+  }
   animation_set_curve(anim, AnimationCurveEaseIn);
   animation_schedule(anim);
 
@@ -73,6 +90,7 @@ void flappy_suspend(Flappy* flappy) {
 }
 
 void flappy_reanimate(Flappy* flappy) {
+  _flappy_pick_new_angle(flappy);
   _set_flappy_hidden(flappy, SHOW_FLAPPY);
   animation_schedule((Animation*)(*flappy).property_animation);
 }

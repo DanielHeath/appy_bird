@@ -25,6 +25,11 @@
       },
       {
         "type": "png-trans",
+        "name": "IMAGE_DUCKHUNT_LEFT",
+        "file": "images/duck-hunt-bw.png"
+      },
+      {
+        "type": "png-trans",
         "name": "IMAGE_SHIP_SPLODE_1",
         "file": "images/ship_explode_1.png"
       },

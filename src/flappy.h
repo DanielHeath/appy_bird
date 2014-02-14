@@ -9,7 +9,7 @@ typedef struct Flappy {
 
 GRect flappy_bounds(Flappy* flappy);
 
-void flappy_create(Flappy* result, Layer *window_layer, GPoint from, GPoint to);
+void flappy_create(Flappy* result, Layer *window_layer, GPoint from, GPoint to, bool first);
 void flappy_destroy(Flappy* flappy);
 
 void flappy_suspend(Flappy* flappy);
