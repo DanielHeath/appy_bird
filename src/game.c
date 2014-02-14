@@ -21,10 +21,6 @@ static GBitmap *ship_splode_3;
 static GBitmap *ship_splode_4;
 static GBitmap *ship_splode_5;
 
-// / todo clamp up/down value
-// / todo vibrate on death
-// / todo flash screen on death
-
 static struct GameUi {
   Window *window;
   TextLayer *score_text;
@@ -105,6 +101,7 @@ static void death_animation_frame(GBitmap *anim_frame) {
 static void end_death_animation(void *nulldata) {
   death_animation_frame(ship_bmp);
   engine.reset_game();
+  engine.redraw_ship();
 }
 
 static void collider_update(struct Animation *animation, const uint32_t time_normalized) {
@@ -135,7 +132,7 @@ static void window_load(Window *window) {
 
   ui.score_text = text_layer_create((GRect) {
         .origin = { 0, 0 },
-        .size = { bounds.size.w, 20 }
+        .size = { bounds.size.w, 60 }
       });
   text_layer_set_text_alignment(ui.score_text, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(ui.score_text));
@@ -225,7 +222,7 @@ static void reset_game() {
   state.player_dead = false;
   state.ship_position = 80;
   state.game_paused = true;
-  text_layer_set_text(ui.score_text, "Select to Start");
+  text_layer_set_text(ui.score_text, "Middle Button to Start\nHold Top/Bottom buttons to move");
 }
 
 static void birdy_spawn(void* data) {

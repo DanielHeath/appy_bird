@@ -2,9 +2,9 @@
   "uuid": "5189f423-7b0b-4b3b-bdb9-bdfe4564c959",
   "shortName": "Appy Bird",
   "longName": "Appy Bird",
-  "companyName": "Hackers Inc",
-  "versionCode": 1,
-  "versionLabel": "1.0.0",
+  "companyName": "Appy Bird LLC",
+  "versionCode": 2,
+  "versionLabel": "2.0.0",
   "watchapp": {
     "watchface": false
   },
@@ -52,6 +52,12 @@
         "type": "png-trans",
         "name": "IMAGE_SHIP_SPLODE_5",
         "file": "images/ship_explode_5.png"
+      },
+      {
+        "type": "png",
+        "name": "IMAGE_APP_ICON",
+        "file": "images/icon.png",
+        "menuIcon": true
       }
     ]
   }
