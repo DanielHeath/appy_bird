@@ -14,3 +14,5 @@ void flappy_destroy(Flappy* flappy);
 
 void flappy_suspend(Flappy* flappy);
 void flappy_reanimate(Flappy* flappy);
+
+unsigned game_progression;

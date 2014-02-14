@@ -194,7 +194,10 @@ static void kill_player() {
   flappy_suspend(ui.flappy);
   flappy_suspend(ui.birdy);
 
-  text_layer_set_text(ui.score_text, "You have died.");
+  static char buf[32];
+  ++state.score;
+  snprintf(buf, 32, "You have died with %u points.", game_progression);
+  text_layer_set_text(ui.score_text, buf);
   run_death_animation();
 }
 
@@ -239,16 +242,12 @@ static void unpause() {
   if (state.game_paused) {
     state.game_paused = false;
     text_layer_set_text(ui.score_text, "Game on!");
-
-// TODO birdy
-
     if ((int)ui.flappy == 0) {
       ui.flappy = malloc(sizeof(Flappy));
       Layer *window_layer = window_get_root_layer(ui.window);
       flappy_create(ui.flappy, window_layer, (GPoint) { 160, 80 }, (GPoint) { EXIT_STAGE_LEFT, state.ship_position }, true);
-
       ui.flappy_spawn_timer = app_timer_register(BIRDY_SPAWN_TIME, birdy_spawn, NULL);
-      // app_timer_cancel
+      // Leak the timer, whatevs, I got #swag.
     } else {
       flappy_reanimate(ui.flappy);
       ui.flappy_spawn_timer = app_timer_register(BIRDY_SPAWN_TIME, birdy_reanim, NULL);

@@ -18,13 +18,15 @@ GRect flappy_bounds(Flappy* flappy) {
 
 #define SHOW_FLAPPY false
 #define HIDE_FLAPPY true
-
+#define POINT_ACCUMULATION 150
 void _set_flappy_hidden(Flappy *flappy, bool hidden) {
 //  APP_LOG(APP_LOG_LEVEL_INFO, "set hidden from %i to %i", (int)layer_get_hidden(bitmap_layer_get_layer((*flappy).bitmap_layer)), (int)hidden);
   layer_set_hidden(bitmap_layer_get_layer((*flappy).bitmap_layer), hidden);
 }
 
+unsigned game_progression;
 void _flappy_pick_new_angle(Flappy* flappy) {
+  game_progression = game_progression + POINT_ACCUMULATION;
   PropertyAnimation* anim = (*flappy).property_animation;
   (*anim).values.from.grect.origin.y = (rand() % 124) + 20;
   (*anim).values.to.grect.origin.y = (rand() % 124) + 20;
@@ -39,9 +41,11 @@ void _stop_flappy_anim(struct Animation *animation, bool finished, void *context
     _set_flappy_hidden(flappy, HIDE_FLAPPY);
   }
 }
+
 AnimationHandlers flappy_handlers = { NULL, _stop_flappy_anim };
 
 void flappy_create(Flappy* result, Layer *window_layer, GPoint from, GPoint to, bool first) {
+  game_progression = 0;
   BitmapLayer *layer = bitmap_layer_create((GRect) {
     .origin = from,
     .size = FLAPPY_SIZE
@@ -69,9 +73,9 @@ void flappy_create(Flappy* result, Layer *window_layer, GPoint from, GPoint to, 
   animation_set_handlers(anim, flappy_handlers, result);
 
   if (first) {
-    animation_set_duration(anim, 2600);
+    animation_set_duration(anim, 2600 - game_progression);
   } else {
-    animation_set_duration(anim, 3000);
+    animation_set_duration(anim, 3000 - game_progression);
   }
   animation_set_curve(anim, AnimationCurveEaseIn);
   animation_schedule(anim);
